@@ -15,6 +15,7 @@
 #include <QtGlobal>
 #include <QTableWidget>
 #include <QByteArray>
+#include <QSignalMapper>
 
 #include "yielddata.h"
 
@@ -36,6 +37,7 @@ private slots:
     void HandlingReadDataSlot();
     void UploadDataSlot();
     void UploadMilkSlot();
+    void SetDisableSlot(int a);
 
 private:
     Ui::MainWindow *ui;
@@ -46,7 +48,7 @@ private:
 
     void InitUI();
     void GenericPanel();
-    void FillTable(QTableWidget *tb);
+    void FillTable(int tbID);
     void ChangeClearSta(int pos);
 
 };

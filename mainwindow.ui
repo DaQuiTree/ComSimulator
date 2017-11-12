@@ -224,7 +224,7 @@
              </layout>
             </item>
             <item>
-             <widget class="QTableWidget" name="panelTable_2">
+             <widget class="QTableWidget" name="panelTable">
               <property name="minimumSize">
                <size>
                 <width>441</width>
@@ -232,7 +232,7 @@
                </size>
               </property>
               <property name="editTriggers">
-               <set>QAbstractItemView::NoEditTriggers</set>
+               <set>QAbstractItemView::DoubleClicked</set>
               </property>
               <property name="tabKeyNavigation">
                <bool>true</bool>
@@ -250,7 +250,7 @@
                <number>5</number>
               </property>
               <attribute name="horizontalHeaderVisible">
-               <bool>false</bool>
+               <bool>true</bool>
               </attribute>
               <attribute name="horizontalHeaderCascadingSectionResizes">
                <bool>false</bool>
@@ -259,7 +259,7 @@
                <bool>false</bool>
               </attribute>
               <attribute name="verticalHeaderVisible">
-               <bool>false</bool>
+               <bool>true</bool>
               </attribute>
               <attribute name="verticalHeaderShowSortIndicator" stdset="0">
                <bool>false</bool>
@@ -402,7 +402,7 @@
              </layout>
             </item>
             <item>
-             <widget class="QTableWidget" name="panelTable">
+             <widget class="QTableWidget" name="panelTable_2">
               <property name="minimumSize">
                <size>
                 <width>441</width>
@@ -410,7 +410,7 @@
                </size>
               </property>
               <property name="editTriggers">
-               <set>QAbstractItemView::NoEditTriggers</set>
+               <set>QAbstractItemView::DoubleClicked</set>
               </property>
               <property name="tabKeyNavigation">
                <bool>true</bool>
@@ -428,16 +428,19 @@
                <number>5</number>
               </property>
               <attribute name="horizontalHeaderVisible">
-               <bool>false</bool>
+               <bool>true</bool>
               </attribute>
               <attribute name="horizontalHeaderCascadingSectionResizes">
                <bool>false</bool>
+              </attribute>
+              <attribute name="horizontalHeaderHighlightSections">
+               <bool>true</bool>
               </attribute>
               <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
                <bool>false</bool>
               </attribute>
               <attribute name="verticalHeaderVisible">
-               <bool>false</bool>
+               <bool>true</bool>
               </attribute>
               <attribute name="verticalHeaderShowSortIndicator" stdset="0">
                <bool>false</bool>

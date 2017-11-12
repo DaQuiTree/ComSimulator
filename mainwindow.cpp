@@ -19,10 +19,21 @@ MainWindow::MainWindow(QWidget *parent) :
     QObject::connect(ui->pButton_Start, SIGNAL(clicked(bool)), this, SLOT(StartSlot()));
     QObject::connect(ui->pButton_Reset, SIGNAL(clicked(bool)), this, SLOT(ResetSlot()));
     QObject::connect(this->mSerialPort, SIGNAL(readyRead()), this, SLOT(HandlingReadDataSlot()));
-    QObject::connect(ui->pButton_yield1, SIGNAL(clicked(bool)), ui->pButton_yield1, SLOT(setDisabled(bool)));
-    QObject::connect(ui->pButton_yield2, SIGNAL(clicked(bool)), ui->pButton_yield2, SLOT(setDisabled(bool)));
-    QObject::connect(ui->pButton_motion1, SIGNAL(clicked(bool)), ui->pButton_motion1, SLOT(setDisabled(bool)));
-    QObject::connect(ui->pButton_motion2, SIGNAL(clicked(bool)), ui->pButton_motion2, SLOT(setDisabled(bool)));
+
+    QSignalMapper *signalMapper = new QSignalMapper(this);
+
+    QObject::connect(ui->pButton_yield1, SIGNAL(clicked(bool)), signalMapper, SLOT(map()));
+    QObject::connect(ui->pButton_yield2, SIGNAL(clicked(bool)), signalMapper, SLOT(map()));
+    QObject::connect(ui->pButton_motion1, SIGNAL(clicked(bool)), signalMapper, SLOT(map()));
+    QObject::connect(ui->pButton_motion2, SIGNAL(clicked(bool)), signalMapper, SLOT(map()));
+
+    signalMapper->setMapping(ui->pButton_yield1, 1);
+    signalMapper->setMapping(ui->pButton_yield2, 2);
+    signalMapper->setMapping(ui->pButton_motion1, 3);
+    signalMapper->setMapping(ui->pButton_motion2, 4);
+
+    QObject::connect(signalMapper, SIGNAL(mapped(int)), this, SLOT(SetDisableSlot(int)));
+
     QObject::connect(this->timer1, SIGNAL(timeout()), this, SLOT(UploadDataSlot()));
     QObject::connect(this->timer2, SIGNAL(timeout()), this, SLOT(UploadMilkSlot()));
 
@@ -91,8 +102,8 @@ void MainWindow::StartSlot()
 void MainWindow::ResetSlot()
 {
     GenericPanel();
-    FillTable(ui->panelTable);
-    FillTable(ui->panelTable_2);
+    FillTable(1);
+    FillTable(2);
 }
 
 void MainWindow::InitUI()
@@ -111,32 +122,43 @@ void MainWindow::InitUI()
         ui->comboBox_port->addItem(portList.at(i).portName());
     }
     delete mSerialPortInfo;
-    FillTable(ui->panelTable);
-    FillTable(ui->panelTable_2);
+    FillTable(1);
+    FillTable(2);
+
 }
 
 void MainWindow::UploadDataSlot()
 {
     QByteArray buf;
-    static uchar pos = 0;
+    static uchar pos = 1;
     ushort cd,mv;
     ushort crcCheck;
 
-    yd[pos].GetData(cd,mv);
+    if(pass == 0x01 && ui->panelTable->item(pos-1, 4)->checkState()){
+           pos++;
+           return;
+    }
+    if(pass == 0x02 && ui->panelTable_2->item(pos-1, 4)->checkState()){
+           pos++;
+           return;
+    }
+    if(pass == 0x01)yd[pos-1].GetData(cd,mv);
+    if(pass == 0x02)yd[pos+32-1].GetData(cd,mv);
     buf= QByteArray::fromHex("01F1BB010A1100008F0000000000000000000000000000000000000000000000000020000C000000042C518D");
     buf[3] = pass;
-    buf[4] = pos++;
+    if(pass == 0x01)buf[4] = pos;
+    if(pass == 0x02)buf[4] = pos+32;
     buf[7] =(uchar)(cd >> 8);
     buf[8] =(uchar)cd;
     buf[39] =(uchar)(mv >> 8);
     buf[40] =(uchar)mv;
     crcCheck = generic_crc(42,(uchar*)buf.data());
-    buf[42] = (uchar)(crcCheck >> 8);
-    buf[43] = (uchar)crcCheck;
+    buf[42] = (uchar)crcCheck;
+    buf[43] = (uchar)(crcCheck >> 8);
 
     mSerialPort->write(buf);
-    if(pos >= 32){
-        pos = 0;
+    if(++pos > 32){
+        pos = 1;
         timer1->stop();
         if(pass == 1){
             ui->pButton_motion1->setEnabled(true);
@@ -149,25 +171,34 @@ void MainWindow::UploadDataSlot()
 void MainWindow::UploadMilkSlot()
 {
     QByteArray buf;
-    static uchar pos = 0;
+    static uchar pos = 1;
     ushort mv,cv;
     ushort crcCheck;
     bool bc;
-
-    yd[pos].GetMilk(mv,cv,bc);
+    if(pass == 0x01 && ui->panelTable->item(pos-1, 4)->checkState()){
+           pos++;
+           return;
+    }
+    if(pass == 0x02 && ui->panelTable_2->item(pos-1, 4)->checkState()){
+           pos++;
+           return;
+    }
+    if(pass == 0x01)yd[pos-1].GetMilk(mv,cv,bc);
+    if(pass == 0x02)yd[pos+32-1].GetMilk(mv,cv,bc);
     buf= QByteArray::fromHex("01F2BB010A1100840B518D");
     buf[3] = pass;
-    buf[4] = pos++;
+    if(pass == 0x01)buf[4] = pos;
+    if(pass == 0x02)buf[4] = pos+32;
     buf[5] =(uchar)(mv >> 8);
     buf[6] =(uchar)mv;
     buf[7] =(uchar)cv;
     crcCheck = generic_crc(42,(uchar*)buf.data());
-    buf[9] = (uchar)(crcCheck >> 8);
-    buf[10] = (uchar)crcCheck;
+    buf[9] = (uchar)crcCheck;
+    buf[10] = (uchar)(crcCheck >> 8);
 
     mSerialPort->write(buf);
-    if(pos >= 32){
-        pos = 0;
+    if(++pos > 32){
+        pos = 1;
         timer2->stop();
         if(pass == 1){
             ui->pButton_yield1->setEnabled(true);
@@ -177,30 +208,43 @@ void MainWindow::UploadMilkSlot()
     }
 }
 
+void MainWindow::SetDisableSlot(int a)
+{
+    switch(a)
+    {
+        case 1: ui->pButton_yield1->setDisabled(true);break;
+        case 2: ui->pButton_yield2->setDisabled(true);break;
+        case 3: ui->pButton_motion1->setDisabled(true);break;
+        case 4: ui->pButton_motion2->setDisabled(true);break;
+     default: break;
+    }
+}
+
 void MainWindow::HandlingReadDataSlot()
 {
     QByteArray buffer;
     ushort crcCheck;
 
     if(mSerialPort->bytesAvailable() >= 7){
-        crcCheck = generic_crc(5,(uchar*)buffer.data());
         buffer = mSerialPort->readAll();
-        if((uchar)(crcCheck >> 8) == buffer[6] && (uchar)crcCheck == buffer[5]) //校验通过...
+        crcCheck = generic_crc(5,(uchar*)buffer.data());
+        if((uchar)(crcCheck >> 8) == (uchar)buffer[6] && (uchar)crcCheck == (uchar)buffer[5]) //校验通过...
         {
-            if((uchar)buffer[0] == 0xF1){
+                if((uchar)buffer[0] == 0xF1){
                 if((uchar)buffer[3] == 0x01 && !ui->pButton_motion1->isEnabled()){
-                    pass = buffer[3];
+                    pass = 1;
                     timer1->start();
                 }else if((uchar)buffer[3] == 0x02 && !ui->pButton_motion2->isEnabled()){
-                    pass = buffer[3];
+                    pass = 2;
+                    qDebug()<<"ok";
                     timer1->start();
                 }
-            }else if((uchar)buffer[1] == 0xF2){
+            }else if((uchar)buffer[0] == 0xF2){
                 if((uchar)buffer[3] == 0x01 && !ui->pButton_yield1->isEnabled()){
-                    pass = buffer[3];
+                    pass = 1;
                     timer2->start();
                 }else if((uchar)buffer[3] == 0x02 && !ui->pButton_yield2->isEnabled()){
-                    pass = buffer[3];
+                    pass = 2;
                     timer2->start();
                 }
             }
@@ -217,7 +261,7 @@ void MainWindow::GenericPanel()
     }
 }
 
-void MainWindow::FillTable(QTableWidget *tb)
+void MainWindow::FillTable(int tbID)
 {
     QTableWidgetItem *item;
     QByteArray array[4];
@@ -227,8 +271,14 @@ void MainWindow::FillTable(QTableWidget *tb)
 
     for(int i = 0; i < 32; i++) //通道一数据
     {
-        yd[i].GetMilk(mv,cv,bc);
-        yd[i].GetData(cd,mo);
+        if(tbID == 1){
+            yd[i].GetMilk(mv,cv,bc);
+            yd[i].GetData(cd,mo);
+        }else if(tbID == 2){
+            yd[i+32].GetMilk(mv,cv,bc);
+            yd[i+32].GetData(cd,mo);
+        }
+
 
         str1 = array[0].setNum(cd,16);
         str2 = array[1].setNum(mo,16);
@@ -243,7 +293,11 @@ void MainWindow::FillTable(QTableWidget *tb)
         str1.insert(0,"30301100");//计步器号
         item->setText(str1.toUpper());
         item->setTextAlignment(Qt::AlignCenter);
-        tb->setItem(i,0,item);
+        if(tbID == 1){
+            ui->panelTable->setItem(i,0,item);
+        }else if(tbID == 2){
+            ui->panelTable_2->setItem(i,0,item);
+        }
 
         item = new QTableWidgetItem();
         len = str2.length();
@@ -252,7 +306,11 @@ void MainWindow::FillTable(QTableWidget *tb)
         }//活动量
         item->setText(str2.toUpper());
         item->setTextAlignment(Qt::AlignCenter);
-        tb->setItem(i,1,item);
+        if(tbID == 1){
+            ui->panelTable->setItem(i,1,item);
+        }else if(tbID == 2){
+            ui->panelTable_2->setItem(i,1,item);
+        }
 
         item = new QTableWidgetItem();
         len = str3.length();
@@ -261,7 +319,11 @@ void MainWindow::FillTable(QTableWidget *tb)
         }
         item->setText(str3.toUpper());
         item->setTextAlignment(Qt::AlignCenter);
-        tb->setItem(i,2,item);//奶量
+        if(tbID == 1){
+            ui->panelTable->setItem(i,2,item);
+        }else if(tbID == 2){
+            ui->panelTable_2->setItem(i,2,item);
+        }//奶量
 
         item = new QTableWidgetItem();
         len = str4.length();
@@ -270,10 +332,18 @@ void MainWindow::FillTable(QTableWidget *tb)
         }//电导率
         item->setText(str4.toUpper());
         item->setTextAlignment(Qt::AlignCenter);
-        tb->setItem(i,3,item);
+        if(tbID == 1){
+            ui->panelTable->setItem(i,3,item);
+        }else if(tbID == 2){
+            ui->panelTable_2->setItem(i,3,item);
+        }
 
         item = new QTableWidgetItem();
         item->setCheckState(Qt::Unchecked);
-        tb->setItem(i,4,item);
+        if(tbID == 1){
+            ui->panelTable->setItem(i,4,item);
+        }else if(tbID == 2){
+            ui->panelTable_2->setItem(i,4,item);
+        }
     }
 }
