@@ -192,7 +192,7 @@ void MainWindow::UploadMilkSlot()
     buf[5] =(uchar)(mv >> 8);
     buf[6] =(uchar)mv;
     buf[7] =(uchar)cv;
-    crcCheck = generic_crc(42,(uchar*)buf.data());
+    crcCheck = generic_crc(9,(uchar*)buf.data());
     buf[9] = (uchar)crcCheck;
     buf[10] = (uchar)(crcCheck >> 8);
 
