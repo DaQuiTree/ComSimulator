@@ -32,6 +32,6 @@ void YieldData::GetData(unsigned short &cd, unsigned short &mo)
 void YieldData::GetMilk(unsigned short &mv, unsigned short &cv, bool &bc)
 {
     mv = milk;
-    cv = cond;
+    cv = cond & 0x00FF;
     bc = bClear;
 }

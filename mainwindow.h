@@ -34,19 +34,21 @@ private slots:
     void StartSlot();
     void ResetSlot();
     void HandlingReadDataSlot();
+    void UploadDataSlot();
+    void UploadMilkSlot();
 
 private:
     Ui::MainWindow *ui;
     QSerialPort *mSerialPort;
     YieldData yd[32*2];
     QTimer *timer1, *timer2;
+    uchar pass;
 
     void InitUI();
     void GenericPanel();
-    void FillTable(QTableWidget &tb);
+    void FillTable(QTableWidget *tb);
     void ChangeClearSta(int pos);
-    void UploadData();
-    void UploadMilk();
+
 };
 
 #endif // MAINWINDOW_H
